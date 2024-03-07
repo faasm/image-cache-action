@@ -9,7 +9,7 @@ inputs:
   read-only:
     description: "Flag to indicate we are only ever reading from the cache"
     required: false
-    default: false
+    default: 'false'
 
 defaults:
   run:
@@ -30,12 +30,6 @@ runs:
         path: /tmp/faasm-docker-images.tar.gz
         key: docker-image-cache-onefile-${{ inputs.faasm-version }}
         lookup-only: true
-
-    - name: "Work-out if we need to write-to or read-from the cache"
-      shell: bash
-      run: |
-        echo "must-write=" >> $GITHUB_OUTPUT
-
 
     - name: "Maximize build space"
       uses: easimon/maximize-build-space@master
