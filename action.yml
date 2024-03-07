@@ -19,19 +19,23 @@ runs:
     # follows (potentially) the write path where images are pulled and
     # saved to a temporary directory (using docker save). Then, it is called
     # in the "read" path, where images are loaded from the temporary directory.
-    - name: "Set up Docker Buildx"
-      uses: docker/setup-buildx-action@v3
-        #       - name: "Log in to DockerHub"
-        #         uses: docker/login-action@v3
-        #         with:
-        #           registry: faasm.azurecr.io
-        #           username: ${{ secrets.ACR_SERVICE_PRINCIPAL_ID }}
-        #           password: ${{ secrets.ACR_SERVICE_PRINCIPAL_PASSWORD }}
+    - name: "Maximize build space"
+      uses: easimon/maximize-build-space@master
+      with:
+        # Leave 25 GB for the / partition for docker images (stored under
+        # /var/lib/docker)
+        root-reserve-mb: 25600
+        remove-android: 'true'
+        remove-codeql: 'true'
+        remove-docker-images: 'true'
+        remove-dotnet: 'true'
+        remove-haskell: 'true'
+
     - uses: actions/cache@v4
       id: docker-image-cache
       with:
-        path: /tmp/faasm-docker-images
-        key: docker-image-cache-${{ inputs.faasm-version }}
+        path: /tmp/faasm-docker-images.tar.gz
+        key: docker-image-cache-onefile-${{ inputs.faasm-version }}
 
     # ----- Write Path -----
     - name: "Pull all docker images"
@@ -41,25 +45,30 @@ runs:
         ./bin/inv_wrapper.sh docker.pull -c redis -c minio -c upload -c worker -c cli
     # Save all docker images to files. Annoyingly, I have not found the way
     # to do this in a loop in GHA
+    - name: "Install pigz"
+      if: steps.docker-image-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: sudo apt install -y pigz
     - name: "Save them to a tar gzip file"
       if: steps.docker-image-cache.outputs.cache-hit != 'true'
       shell: bash
       run: |
-        mkdir -p /tmp/faasm-docker-images
-        cd /tmp/faasm-docker-images/
         # docker save faasm.azurecr.io/redis:${{ inputs.faasm-version }} | gzip /tmp/faasm-docker-images/redis_${{ inputs.faasm-version }}.tar
-        for image in redis minio upload worker cli
-        do
-          docker save faasm.azurecr.io/${image}:${{ inputs.faasm-version }} | gzip > /tmp/faasm-docker-images/${image}_${{ inputs.faasm-version }}.tar
-        done
-        ls -lart /tmp/faasm-docker-images/
+        #         for image in redis minio upload worker cli
+        #         do
+        #           docker save faasm.azurecr.io/${image}:${{ inputs.faasm-version }} | gzip > /tmp/faasm-docker-images/${image}_${{ inputs.faasm-version }}.tar.gz
+        #         done
+        docker image save \
+          faasm.azurecr.io/redis:${{ inputs.faasm-version}} \
+          faasm.azurecr.io/minio:${{ inputs.faasm-version}} \
+          faasm.azurecr.io/upload:${{ inputs.faasm-version}} \
+          faasm.azurecr.io/worker:${{ inputs.faasm-version}} \
+          faasm.azurecr.io/cli:${{ inputs.faasm-version}} | pigz --fast > /tmp/faasm-docker-images.tar.gz
+        ls -lart /tmp
 
     # ----- Read Path -----
     - name: "Load all images from the temporary directory"
       if: steps.docker-image-cache.outputs.cache-hit == 'true'
       shell: bash
       run: |
-        for image in redis minio upload worker cli
-        do
-          docker load --input /tmp/faasm-docker-images/${image}_${{ inputs.faasm-version }}.tar.gz
-        done
+        docker load --input /tmp/faasm-docker-images.tar.gz
