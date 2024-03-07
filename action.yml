@@ -46,12 +46,13 @@ runs:
       shell: bash
       run: |
         mkdir -p /tmp/faasm-docker-images
-        ls -lart /tmp/faasm-docker-images/
+        cd /tmp/faasm-docker-images/
         # docker save faasm.azurecr.io/redis:${{ inputs.faasm-version }} | gzip /tmp/faasm-docker-images/redis_${{ inputs.faasm-version }}.tar
         for image in redis minio upload worker cli
         do
           docker save faasm.azurecr.io/${image}:${{ inputs.faasm-version }} | gzip /tmp/faasm-docker-images/${image}_${{ inputs.faasm-version }}.tar
         done
+        ls -lart /tmp/faasm-docker-images/
 
     # ----- Read Path -----
     - name: "Load all images from the temporary directory"
