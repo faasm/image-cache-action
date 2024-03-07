@@ -38,6 +38,8 @@ runs:
       if: steps.docker-image-cache.outputs.cache-hit != 'true'
       shell: bash
       run: |
+        mkdir -p /tmp/faasm-docker-images
+        ls -lart /tmp/faasm-docker-images/
         ./bin/inv_wrapper.sh docker.pull -c redis -c minio -c upload -c worker -c cli
     # Save all docker images to files. Annoyingly, I have not found the way
     # to do this in a loop in GHA
