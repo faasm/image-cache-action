@@ -6,6 +6,9 @@ inputs:
   faasm-version:
     description: "Faasm version"
     required: true
+  faabric-version:
+    description: "Faabric version"
+    required: true
   read-only:
     description: "Flag to indicate we are only ever reading from the cache"
     required: false
@@ -54,7 +57,7 @@ runs:
       id: docker-image-cache
       with:
         path: /tmp/faasm-docker-images.tar.gz
-        key: docker-image-cache-onefile-${{ inputs.faasm-version }}
+        key: docker-image-cache-single-file-${{ inputs.faasm-version }}
 
     # ----- Write Path -----
     - name: "Pull all docker images"
@@ -67,6 +70,7 @@ runs:
         do
           docker image pull faasm.azurecr.io/${image}:${{ inputs.faasm-version }}
         done
+        docker image pull faasm.azurecr.io/planner:${{ inputs.faabric-version }}
     # Save all docker images to one file
     - name: "Save them to a tar gzip file"
       if: |
@@ -79,6 +83,7 @@ runs:
           faasm.azurecr.io/minio:${{ inputs.faasm-version}} \
           faasm.azurecr.io/upload:${{ inputs.faasm-version}} \
           faasm.azurecr.io/worker:${{ inputs.faasm-version}} \
+          faasm.azurecr.io/planner:${{ inputs.faabric-version}} \
           faasm.azurecr.io/cli:${{ inputs.faasm-version}} | pigz --fast > /tmp/faasm-docker-images.tar.gz
         ls -lart /tmp
 
