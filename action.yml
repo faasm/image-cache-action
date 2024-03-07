@@ -46,21 +46,11 @@ runs:
         do
           docker image pull faasm.azurecr.io/${image}:${{ inputs.faasm-version }}
         done
-    # Save all docker images to files. Annoyingly, I have not found the way
-    # to do this in a loop in GHA
-    - name: "Install pigz"
-      if: steps.docker-image-cache.outputs.cache-hit != 'true'
-      shell: bash
-      run: sudo apt install -y pigz
+    # Save all docker images to one file
     - name: "Save them to a tar gzip file"
       if: steps.docker-image-cache.outputs.cache-hit != 'true'
       shell: bash
       run: |
-        # docker save faasm.azurecr.io/redis:${{ inputs.faasm-version }} | gzip /tmp/faasm-docker-images/redis_${{ inputs.faasm-version }}.tar
-        #         for image in redis minio upload worker cli
-        #         do
-        #           docker save faasm.azurecr.io/${image}:${{ inputs.faasm-version }} | gzip > /tmp/faasm-docker-images/${image}_${{ inputs.faasm-version }}.tar.gz
-        #         done
         docker image save \
           faasm.azurecr.io/redis:${{ inputs.faasm-version}} \
           faasm.azurecr.io/minio:${{ inputs.faasm-version}} \
