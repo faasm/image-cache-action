@@ -42,7 +42,10 @@ runs:
       if: steps.docker-image-cache.outputs.cache-hit != 'true'
       shell: bash
       run: |
-        ./bin/inv_wrapper.sh docker.pull -c redis -c minio -c upload -c worker -c cli
+        for image in redis minio upload worker cli
+        do
+          docker image pull faasm.azurecr.io/${image}:${{ inputs.faasm-version }}
+        done
     # Save all docker images to files. Annoyingly, I have not found the way
     # to do this in a loop in GHA
     - name: "Install pigz"
