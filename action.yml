@@ -6,21 +6,40 @@ inputs:
   faasm-version:
     description: "Faasm version"
     required: true
+  read-only:
+    description: "Flag to indicate we are only ever reading from the cache"
+    required: false
+    default: false
 
 defaults:
   run:
     shell: bash
 
+# This action is used to only pull all the images in a Faasm deployment
+# once per GHA workflow. To do so, it is first called on its own, and
+# follows (potentially) the write path where images are pulled and
+# saved to a temporary directory (using docker save). Then, it is called
+# in the "read" path, where images are loaded from the temporary directory.
 runs:
   using: "composite"
   steps:
-    # This action is used to only pull all the images in a Faasm deployment
-    # once per GHA workflow. To do so, it is first called on its own, and
-    # follows (potentially) the write path where images are pulled and
-    # saved to a temporary directory (using docker save). Then, it is called
-    # in the "read" path, where images are loaded from the temporary directory.
+    # First check if the cache is there already, as we can skip the next step
+    - uses: actions/cache@v4
+      id: docker-image-cache-probe
+      with:
+        path: /tmp/faasm-docker-images.tar.gz
+        key: docker-image-cache-onefile-${{ inputs.faasm-version }}
+        lookup-only: true
+
+    - name: "Work-out if we need to write-to or read-from the cache"
+      shell: bash
+      run: |
+        echo "must-write=" >> $GITHUB_OUTPUT
+
+
     - name: "Maximize build space"
       uses: easimon/maximize-build-space@master
+      if: steps.docker-image-cache-probe.outputs.cache-hit != 'true'
       with:
         # Leave 25 GB for the / partition for docker images (stored under
         # /var/lib/docker)
@@ -31,7 +50,13 @@ runs:
         remove-dotnet: 'true'
         remove-haskell: 'true'
 
+    # Only call the cache action if:
+    # 1. We have a cache miss (so we always want to populate it)
+    # 2. We have a cache hit, and we are reading the cache
     - uses: actions/cache@v4
+      if: |
+        steps.docker-image-cache-probe.outputs.cache-hit != 'true' ||
+        ${{ inputs.read-only }} == 'true'
       id: docker-image-cache
       with:
         path: /tmp/faasm-docker-images.tar.gz
@@ -39,7 +64,9 @@ runs:
 
     # ----- Write Path -----
     - name: "Pull all docker images"
-      if: steps.docker-image-cache.outputs.cache-hit != 'true'
+      if: |
+        steps.docker-image-cache.result != 'skipped' &&
+        steps.docker-image-cache.outputs.cache-hit != 'true'
       shell: bash
       run: |
         for image in redis minio upload worker cli
@@ -48,7 +75,9 @@ runs:
         done
     # Save all docker images to one file
     - name: "Save them to a tar gzip file"
-      if: steps.docker-image-cache.outputs.cache-hit != 'true'
+      if: |
+        steps.docker-image-cache.result != 'skipped' &&
+        steps.docker-image-cache.outputs.cache-hit != 'true'
       shell: bash
       run: |
         docker image save \
@@ -61,7 +90,10 @@ runs:
 
     # ----- Read Path -----
     - name: "Load all images from the temporary directory"
-      if: steps.docker-image-cache.outputs.cache-hit == 'true'
+      if: |
+        steps.docker-image-cache.result != 'skipped' &&
+        steps.docker-image-cache.outputs.cache-hit == 'true' &&
+        ${{ inputs.read-only }} == 'true'
       shell: bash
       run: |
         docker load --input /tmp/faasm-docker-images.tar.gz
