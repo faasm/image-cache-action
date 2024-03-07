@@ -36,6 +36,7 @@ runs:
     # ----- Write Path -----
     - name: "Pull all docker images"
       if: steps.docker-image-cache.outputs.cache-hit != 'true'
+      shell: bash
       run: |
         ./bin/inv_wrapper.sh docker.pull -c redis minio upload worker cli
     # Save all docker images to files. Annoyingly, I have not found the way
@@ -43,42 +44,43 @@ runs:
     - name: "Redis"
       if: steps.docker-image-cache.outputs.cache-hit != 'true'
       uses: docker/build-push-action@v5
-        with:
-          context: .
-          tags: faasm.azurecr.io/redis:${{ inputs.faasm-version }}
-          outputs: type=docker,dest=/tmp/faasm-docker-images/redis_${{ inputs.faasm-version }}.tar
+      with:
+        context: .
+        tags: faasm.azurecr.io/redis:${{ inputs.faasm-version }}
+        outputs: type=docker,dest=/tmp/faasm-docker-images/redis_${{ inputs.faasm-version }}.tar
     - name: "MinIO"
       if: steps.docker-image-cache.outputs.cache-hit != 'true'
       uses: docker/build-push-action@v5
-        with:
-          context: .
-          tags: faasm.azurecr.io/minio:${{ inputs.faasm-version }}
-          outputs: type=docker,dest=/tmp/faasm-docker-images/minio_${{ inputs.faasm-version }}.tar
+      with:
+        context: .
+        tags: faasm.azurecr.io/minio:${{ inputs.faasm-version }}
+        outputs: type=docker,dest=/tmp/faasm-docker-images/minio_${{ inputs.faasm-version }}.tar
     - name: "Upload"
       if: steps.docker-image-cache.outputs.cache-hit != 'true'
       uses: docker/build-push-action@v5
-        with:
-          context: .
-          tags: faasm.azurecr.io/upload:${{ inputs.faasm-version }}
-          outputs: type=docker,dest=/tmp/faasm-docker-images/upload_${{ inputs.faasm-version }}.tar
+      with:
+        context: .
+        tags: faasm.azurecr.io/upload:${{ inputs.faasm-version }}
+        outputs: type=docker,dest=/tmp/faasm-docker-images/upload_${{ inputs.faasm-version }}.tar
     - name: "Worker"
       if: steps.docker-image-cache.outputs.cache-hit != 'true'
       uses: docker/build-push-action@v5
-        with:
-          context: .
-          tags: faasm.azurecr.io/worker:${{ inputs.faasm-version }}
-          outputs: type=docker,dest=/tmp/faasm-docker-images/worker_${{ inputs.faasm-version }}.tar
+      with:
+        context: .
+        tags: faasm.azurecr.io/worker:${{ inputs.faasm-version }}
+        outputs: type=docker,dest=/tmp/faasm-docker-images/worker_${{ inputs.faasm-version }}.tar
     - name: "Faasm CLI"
       if: steps.docker-image-cache.outputs.cache-hit != 'true'
       uses: docker/build-push-action@v5
-        with:
-          context: .
-          tags: faasm.azurecr.io/cli:${{ inputs.faasm-version }}
-          outputs: type=docker,dest=/tmp/faasm-docker-images/cli_${{ inputs.faasm-version }}.tar
+      with:
+        context: .
+        tags: faasm.azurecr.io/cli:${{ inputs.faasm-version }}
+        outputs: type=docker,dest=/tmp/faasm-docker-images/cli_${{ inputs.faasm-version }}.tar
 
     # ----- Read Path -----
     - name: "Load all images from the temporary directory"
       if: steps.docker-image-cache.outputs.cache-hit == 'true'
+      shell: bash
       run: |
         docker load --input /tmp/redis_${{ inputs.faasm-version }}.tar
         docker load --input /tmp/minio_${{ inputs.faasm-version }}.tar
