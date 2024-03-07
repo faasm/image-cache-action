@@ -31,16 +31,16 @@ runs:
       id: docker-image-cache-probe
       with:
         path: /tmp/faasm-docker-images.tar.gz
-        key: docker-image-cache-onefile-${{ inputs.faasm-version }}
+        key: docker-image-cache-single-file-${{ inputs.faasm-version }}
         lookup-only: true
 
     - name: "Maximize build space"
       uses: easimon/maximize-build-space@master
       if: steps.docker-image-cache-probe.outputs.cache-hit != 'true'
       with:
-        # Leave 25 GB for the / partition for docker images (stored under
+        # Leave 35 GB for the / partition for docker images (stored under
         # /var/lib/docker)
-        root-reserve-mb: 25600
+        root-reserve-mb: 35600
         remove-android: 'true'
         remove-codeql: 'true'
         remove-docker-images: 'true'
