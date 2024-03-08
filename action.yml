@@ -38,9 +38,7 @@ runs:
     # read (load) images (i.e. read-only mode)
     - name: "Maximize build space"
       uses: easimon/maximize-build-space@master
-      if: |
-        steps.docker-image-cache-probe.outputs.cache-hit != 'true' ||
-        ${{ inputs.read-only }} == 'true'
+      if: ${{ (steps.docker-image-cache-probe.outputs.cache-hit != 'true') || (inputs.read-only != 'false') }}
       with:
         # Leave 35 GB for the / partition for docker images (stored under
         # /var/lib/docker)
@@ -56,19 +54,16 @@ runs:
     # 1. We have a cache miss (so we always want to populate it)
     # 2. We have a cache hit, and we are reading the cache
     - uses: actions/cache@v4
-      if: |
-        steps.docker-image-cache-probe.outputs.cache-hit != 'true' ||
-        ${{ inputs.read-only }} == 'true'
+      if: ${{ (steps.docker-image-cache-probe.outputs.cache-hit != 'true') || (inputs.read-only != 'false') }}
       id: docker-image-cache
       with:
         path: /tmp/faasm-docker-images.tar.gz
         key: docker-image-cache-single-file-${{ inputs.faasm-version }}
 
     # ----- Write Path -----
+    # Only pull the docker images when we have a cache miss
     - name: "Pull all docker images"
-      if: |
-        steps.docker-image-cache.result != 'skipped' &&
-        steps.docker-image-cache.outputs.cache-hit != 'true'
+      if: ${{ steps.docker-image-cache-probe.outputs.cache-hit != 'true' }}
       shell: bash
       run: |
         for image in redis minio upload worker cli
@@ -76,11 +71,9 @@ runs:
           docker image pull faasm.azurecr.io/${image}:${{ inputs.faasm-version }}
         done
         docker image pull faasm.azurecr.io/planner:${{ inputs.faabric-version }}
-    # Save all docker images to one file
+    # Save all docker images to one file when we have a cache miss, and we are not in read-only
     - name: "Save them to a tar gzip file"
-      if: |
-        steps.docker-image-cache.result != 'skipped' &&
-        steps.docker-image-cache.outputs.cache-hit != 'true'
+      if: ${{ (steps.docker-image-cache-probe.outputs.cache-hit != 'true') && (inputs.read-only == 'false') }}
       shell: bash
       run: |
         docker image save \
@@ -94,10 +87,9 @@ runs:
 
     # ----- Read Path -----
     - name: "Load all images from the temporary directory"
-      if: |
-        steps.docker-image-cache.result != 'skipped' &&
-        steps.docker-image-cache.outputs.cache-hit == 'true' &&
-        ${{ inputs.read-only }} == 'true'
+      # Load images when we are in read-only mode (previous steps should
+      # guarantee that the input file is there, fail otherwise)
+      if: ${{ inputs.read-only == 'true' }}
       shell: bash
       run: |
         docker load --input /tmp/faasm-docker-images.tar.gz
