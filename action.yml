@@ -34,9 +34,13 @@ runs:
         key: docker-image-cache-single-file-${{ inputs.faasm-version }}
         lookup-only: true
 
+    # Make more space if we will fetch all images (so cache miss), or we will
+    # read (load) images (i.e. read-only mode)
     - name: "Maximize build space"
       uses: easimon/maximize-build-space@master
-      if: steps.docker-image-cache-probe.outputs.cache-hit != 'true'
+      if: |
+        steps.docker-image-cache-probe.outputs.cache-hit != 'true' ||
+        ${{ inputs.read-only }} == 'true'
       with:
         # Leave 35 GB for the / partition for docker images (stored under
         # /var/lib/docker)
@@ -46,6 +50,7 @@ runs:
         remove-docker-images: 'true'
         remove-dotnet: 'true'
         remove-haskell: 'true'
+
 
     # Only call the cache action if:
     # 1. We have a cache miss (so we always want to populate it)
