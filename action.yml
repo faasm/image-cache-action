@@ -27,7 +27,7 @@ runs:
   using: "composite"
   steps:
     # First check if the cache is there already, as we can skip the next step
-    - uses: actions/cache@v4
+    - uses: actions/cache/restore@v4
       id: docker-image-cache-probe
       with:
         path: /tmp/faasm-docker-images.tar.gz
