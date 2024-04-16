@@ -66,7 +66,7 @@ runs:
       if: ${{ steps.docker-image-cache-probe.outputs.cache-hit != 'true' }}
       shell: bash
       run: |
-        for image in redis minio upload worker cli
+        for image in redis minio upload cli # worker
         do
           docker image pull faasm.azurecr.io/${image}:${{ inputs.faasm-version }}
         done
@@ -76,11 +76,11 @@ runs:
       if: ${{ (steps.docker-image-cache-probe.outputs.cache-hit != 'true') && (inputs.read-only == 'false') }}
       shell: bash
       run: |
+        # faasm.azurecr.io/worker:${{ inputs.faasm-version}} \
         docker image save \
           faasm.azurecr.io/redis:${{ inputs.faasm-version}} \
           faasm.azurecr.io/minio:${{ inputs.faasm-version}} \
           faasm.azurecr.io/upload:${{ inputs.faasm-version}} \
-          faasm.azurecr.io/worker:${{ inputs.faasm-version}} \
           faasm.azurecr.io/planner:${{ inputs.faabric-version}} \
           faasm.azurecr.io/cli:${{ inputs.faasm-version}} | pigz --fast > /tmp/faasm-docker-images.tar.gz
         ls -lart /tmp
