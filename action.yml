@@ -68,22 +68,18 @@ runs:
       run: |
         for image in redis minio upload cli # worker
         do
-          docker image pull faasm.azurecr.io/${image}:${{ inputs.faasm-version }}
+          docker image pull ghcr.io/faasm/${image}:${{ inputs.faasm-version }}
         done
-        # docker image pull faasm.azurecr.io/planner:${{ inputs.faabric-version }}
     # Save all docker images to one file when we have a cache miss, and we are not in read-only
     - name: "Save them to a tar gzip file"
       if: ${{ (steps.docker-image-cache-probe.outputs.cache-hit != 'true') && (inputs.read-only == 'false') }}
       shell: bash
       run: |
-        # faasm.azurecr.io/worker:${{ inputs.faasm-version}} \
-        # faasm.azurecr.io/planner:${{ inputs.faabric-version}} \
-        # faasm.azurecr.io/worker:${{ inputs.faasm-version}} \
         docker image save \
-          faasm.azurecr.io/redis:${{ inputs.faasm-version}} \
-          faasm.azurecr.io/minio:${{ inputs.faasm-version}} \
-          faasm.azurecr.io/upload:${{ inputs.faasm-version}} \
-          faasm.azurecr.io/cli:${{ inputs.faasm-version}} | pigz --fast > /tmp/faasm-docker-images.tar.gz
+          ghcr.io/faasm/redis:${{ inputs.faasm-version}} \
+          ghcr.io/faasm/minio:${{ inputs.faasm-version}} \
+          ghcr.io/faasm/upload:${{ inputs.faasm-version}} \
+          ghcr.io/faasm/cli:${{ inputs.faasm-version}} | pigz --fast > /tmp/faasm-docker-images.tar.gz
         ls -lart /tmp
 
     # ----- Read Path -----
