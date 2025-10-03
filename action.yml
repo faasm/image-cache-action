@@ -42,7 +42,7 @@ runs:
       with:
         # Leave 35 GB for the / partition for docker images (stored under
         # /var/lib/docker)
-        root-reserve-mb: 38600
+        root-reserve-mb: 37600
         remove-android: 'true'
         remove-codeql: 'true'
         remove-docker-images: 'true'
